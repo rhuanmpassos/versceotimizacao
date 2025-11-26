@@ -3,7 +3,7 @@
   <div class="relative flex min-h-screen flex-col text-white">
     <Navbar />
     <main class="flex-1">
-      <component :is="isReferralRoute ? ReferralPage : LandingPage" />
+      <router-view />
     </main>
     <Footer />
   </div>
@@ -12,19 +12,17 @@
 
 <script setup>
 import { onMounted } from 'vue'
+import { useRoute } from 'vue-router'
 import { Analytics } from '@vercel/analytics/vue'
-import LandingPage from './pages/LandingPage.vue'
-import ReferralPage from './pages/ReferralPage.vue'
 import GradientBackground from './components/GradientBackground.vue'
 import Navbar from './components/Navbar.vue'
 import Footer from './components/Footer.vue'
 import api from './utils/api'
 
-const isReferralRoute = window.location.pathname.startsWith('/referral')
+const route = useRoute()
 
 onMounted(() => {
-  const urlParams = new URLSearchParams(window.location.search)
-  const refCode = urlParams.get('ref')
+  const refCode = route.query.ref
 
   if (refCode) {
     api.trackReferral({ referral_code: refCode })
