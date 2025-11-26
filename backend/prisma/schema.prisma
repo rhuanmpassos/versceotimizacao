@@ -1,0 +1,34 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model Lead {
+  id            String   @id @default(uuid())
+  nome          String
+  whatsapp      String
+  referral_code String?
+  ip            String?
+  user_agent    String?
+  created_at    DateTime @default(now())
+}
+
+model Referrer {
+  id            String   @id @default(uuid())
+  nome          String
+  whatsapp      String
+  referral_code String   @unique
+  created_at    DateTime @default(now())
+}
+
+model ReferralHit {
+  id            String   @id @default(uuid())
+  referral_code String
+  ip            String
+  user_agent    String
+  created_at    DateTime @default(now())
+}
