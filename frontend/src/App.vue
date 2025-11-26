@@ -8,12 +8,14 @@
     <Footer />
   </div>
   <Analytics />
+  <SpeedInsights />
 </template>
 
 <script setup>
 import { onMounted } from 'vue'
 import { useRoute } from 'vue-router'
 import { Analytics } from '@vercel/analytics/vue'
+import { SpeedInsights } from '@vercel/speed-insights/vue'
 import GradientBackground from './components/GradientBackground.vue'
 import Navbar from './components/Navbar.vue'
 import Footer from './components/Footer.vue'
