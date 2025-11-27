@@ -1,7 +1,7 @@
 <template>
-  <div class="space-y-10">
+  <div class="space-y-6 sm:space-y-8 md:space-y-10 w-full">
     <HeroSection />
-    <div id="servicos" class="space-y-6">
+    <div id="servicos" class="space-y-4 sm:space-y-6 w-full">
       <FeatureSection
         v-for="(section, index) in sections"
         :key="section.id"
@@ -17,7 +17,7 @@
         :border-top="index !== 0"
       />
     </div>
-    <div id="referral">
+    <div id="referral" class="w-full">
       <ReferralCTA />
     </div>
   </div>

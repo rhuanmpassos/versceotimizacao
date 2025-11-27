@@ -1,22 +1,31 @@
 <template>
-  <div class="flex flex-col items-center justify-center min-h-screen">
-    <Card>
-      <h1 class="text-2xl font-bold mb-4">Referral Info Page</h1>
-      <form @submit.prevent="submit" v-if="!referralLink">
-        <div class="mb-4">
-          <Input v-model="form.name" placeholder="Name" />
+  <div class="flex flex-col items-center justify-center min-h-screen px-4 sm:px-5 md:px-8 py-12 sm:py-16">
+    <Card class="w-full max-w-2xl">
+      <div class="space-y-4 sm:space-y-6 text-white">
+        <h1 class="text-2xl sm:text-3xl md:text-4xl font-bold mb-4 sm:mb-6 text-center sm:text-left">Referral Info Page</h1>
+        <form @submit.prevent="submit" v-if="!referralLink" class="space-y-4 sm:space-y-5">
+          <div>
+            <Input v-model="form.name" placeholder="Nome" />
+          </div>
+          <div>
+            <Input v-model="form.whatsapp" placeholder="WhatsApp" />
+          </div>
+          <Button type="submit" :disabled="loading">
+            <span v-if="!loading">Obter Link de Indicação</span>
+            <span v-else>Gerando...</span>
+          </Button>
+        </form>
+        <div v-else class="space-y-4">
+          <div>
+            <p class="text-sm sm:text-base text-white/70 mb-2">Seu link de indicação:</p>
+            <a :href="referralLink" target="_blank" class="text-sm sm:text-base font-semibold text-cyan-300 break-all hover:underline">{{ referralLink }}</a>
+          </div>
         </div>
-        <div class="mb-4">
-          <Input v-model="form.whatsapp" placeholder="WhatsApp" />
+        <div class="min-h-[24px]">
+          <p v-if="loading" class="text-sm text-white/70">Carregando...</p>
+          <p v-if="error" class="text-sm text-rose-300">{{ error }}</p>
         </div>
-        <Button>Get Referral Link</Button>
-      </form>
-      <div v-else>
-        <p>Your referral link:</p>
-        <a :href="referralLink" target="_blank">{{ referralLink }}</a>
       </div>
-      <p v-if="loading">Loading...</p>
-      <p v-if="error">{{ error }}</p>
     </Card>
   </div>
 </template>

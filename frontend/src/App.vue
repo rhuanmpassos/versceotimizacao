@@ -1,8 +1,8 @@
 <template>
   <GradientBackground />
-  <div class="relative flex min-h-screen flex-col text-white">
+  <div class="relative flex min-h-screen flex-col text-white w-full">
     <Navbar />
-    <main class="flex-1">
+    <main class="flex-1 w-full">
       <router-view />
     </main>
     <Footer />

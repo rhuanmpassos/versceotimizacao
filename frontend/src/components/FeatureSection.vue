@@ -1,36 +1,35 @@
 <template>
   <section
     :class="[
-      'relative py-16 sm:py-20',
+      'relative py-12 sm:py-16 md:py-20',
       borderTop ? 'border-t border-white/5' : '',
     ]"
   >
-    <div class="mx-auto grid max-w-6xl items-center gap-10 px-5 sm:px-8 lg:grid-cols-2 lg:gap-16">
+    <div class="mx-auto grid max-w-6xl items-center gap-6 sm:gap-8 md:gap-10 lg:grid-cols-2 lg:gap-16 px-4 sm:px-5 md:px-8">
       <div
         :class="imageOrderClass"
-        class="group relative flex items-center justify-center"
+        class="group relative flex items-center justify-center w-full"
         v-motion
         :initial="{ opacity: 0, x: reverse ? 40 : -40 }"
         :enter="{ opacity: 1, x: 0, transition: { delay: 0.2 } }"
         style="will-change: transform, opacity;"
       >
-        <div class="relative w-full overflow-hidden rounded-[28px] border border-white/10 bg-black/20 shadow-[0_20px_60px_rgba(0,0,0,0.55)]" style="aspect-ratio: 16/9; min-height: 300px;">
+        <div class="relative w-full max-w-full overflow-hidden rounded-[20px] sm:rounded-[24px] md:rounded-[28px] border border-white/[0.08] bg-[#0a0f1f] shadow-[0_20px_60px_rgba(0,0,0,0.55)]" style="aspect-ratio: 1200/646;">
           <img 
             :src="image" 
             :alt="imageAlt" 
-            class="absolute inset-0 h-full w-full object-cover" 
+            class="absolute inset-0 w-full h-full object-cover object-center"
             loading="lazy"
-            width="1200"
-            height="675"
             decoding="async"
           />
-          <div class="pointer-events-none absolute inset-0 bg-gradient-to-br from-transparent via-transparent to-black/40"></div>
+          <div class="pointer-events-none absolute inset-0 bg-gradient-to-br from-transparent via-transparent to-black/30"></div>
         </div>
-        <span class="pointer-events-none absolute -left-10 top-10 h-24 w-24 rounded-full bg-cyan-500/20 blur-3xl"></span>
-        <span class="pointer-events-none absolute -bottom-8 right-0 h-28 w-28 rounded-full bg-orange-500/20 blur-3xl"></span>
+        <span class="pointer-events-none absolute -left-5 sm:-left-10 top-5 sm:top-10 h-16 w-16 sm:h-24 sm:w-24 rounded-full bg-cyan-500/20 blur-3xl"></span>
+        <span class="pointer-events-none absolute -bottom-4 sm:-bottom-8 right-0 h-20 w-20 sm:h-28 sm:w-28 rounded-full bg-orange-500/20 blur-3xl"></span>
       </div>
       <div
         :class="textOrderClass"
+        class="w-full"
         v-motion
         :initial="{ opacity: 0, y: 30 }"
         :enter="{ opacity: 1, y: 0, transition: { delay: 0.1 } }"
