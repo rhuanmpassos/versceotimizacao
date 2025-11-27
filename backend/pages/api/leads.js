@@ -208,25 +208,25 @@ export default async function handler(req, res) {
       referrerNome: referrerNome || null,
     })
 
-    // Enviar notificação para Discord (não bloqueia a resposta)
+    // Enviar notificação para Discord (DEVE aguardar em serverless)
+    // Em ambiente serverless, se não aguardarmos, a função pode encerrar antes do envio
     console.info('[Leads] Iniciando envio de notificação Discord...')
-    sendDiscordNotification({
-      nome: data.nome,
-      whatsapp: normalizedWhatsApp,
-      referrerNome: referrerNome,
-    })
-      .then((success) => {
-        if (success) {
-          console.info('[Leads] Notificação Discord enviada com sucesso')
-        } else {
-          console.warn('[Leads] Notificação Discord não foi enviada (verifique logs do Discord)')
-        }
+    try {
+      const discordSuccess = await sendDiscordNotification({
+        nome: data.nome,
+        whatsapp: normalizedWhatsApp,
+        referrerNome: referrerNome,
       })
-      .catch((error) => {
-        console.error('[Leads] Erro ao enviar notificação Discord:', error)
-        console.error('[Leads] Stack trace:', error.stack)
-        // Não falha a requisição se o Discord falhar
-      })
+      
+      if (discordSuccess) {
+        console.info('[Leads] Notificação Discord enviada com sucesso')
+      } else {
+        console.warn('[Leads] Notificação Discord não foi enviada (verifique logs do Discord)')
+      }
+    } catch (discordError) {
+      console.error('[Leads] Erro ao enviar notificação Discord:', discordError.message)
+      // Não falha a requisição se o Discord falhar
+    }
 
     return res.status(201).json({ success: true })
   } catch (error) {

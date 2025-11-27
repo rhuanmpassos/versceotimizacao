@@ -137,28 +137,8 @@ async function sendDirectMessage({ nome, whatsapp, referrerNome = null }) {
   }
 
   try {
-    // First, verify the bot token by getting bot info
-    console.info('[Discord] Verificando token do bot...')
-    const botInfoResponse = await fetch('https://discord.com/api/v10/users/@me', {
-      method: 'GET',
-      headers: {
-        'Authorization': `Bot ${botToken}`,
-      },
-    })
-
-    if (!botInfoResponse.ok) {
-      const errorText = await botInfoResponse.text()
-      console.error('[Discord] Token do bot inválido. Erro ao verificar:', {
-        status: botInfoResponse.status,
-        error: errorText,
-      })
-      console.error('[Discord] ⚠️  O DISCORD_BOT_TOKEN está inválido ou expirado.')
-      console.error('[Discord] ⚠️  Acesse https://discord.com/developers/applications e gere um novo token.')
-      return false
-    }
-
-    const botInfo = await botInfoResponse.json()
-    console.info('[Discord] Bot verificado:', botInfo.username || botInfo.id)
+    // Não verificamos o token a cada envio - isso adiciona latência desnecessária
+    // Se o token estiver inválido, o erro será capturado ao tentar criar o canal DM
     console.info('[Discord] Criando canal DM para usuário:', userId)
     
     // Step 1: Create DM channel
@@ -188,9 +168,10 @@ async function sendDirectMessage({ nome, whatsapp, referrerNome = null }) {
         error: errorDetails,
       })
       
-      // Se for 401, o token está inválido (mas já verificamos antes)
+      // Se for 401, o token está inválido
       if (dmChannelResponse.status === 401) {
-        console.error('[Discord] Erro 401 ao criar DM. Token pode estar correto mas sem permissões.')
+        console.error('[Discord] Erro 401: Token do bot inválido ou expirado.')
+        console.error('[Discord] ⚠️  Acesse https://discord.com/developers/applications e gere um novo token.')
       } else if (dmChannelResponse.status === 403) {
         console.error('[Discord] Bot não tem permissão para enviar DMs para este usuário.')
         console.error('[Discord] Dica: O usuário pode ter bloqueado DMs de bots ou o bot não está no mesmo servidor.')
