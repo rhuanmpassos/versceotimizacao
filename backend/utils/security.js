@@ -97,14 +97,13 @@ export const setSecurityHeaders = (req, res) => {
   // Permissions policy
   res.setHeader('Permissions-Policy', 'geolocation=(), microphone=(), camera=()')
   
-  // Content Security Policy (adjust based on your needs)
+  // Content Security Policy para API (mais restritivo)
+  // APIs não devem servir HTML/scripts, então CSP é bem restritivo
   const csp = [
-    "default-src 'self'",
-    "script-src 'self' 'unsafe-inline' 'unsafe-eval'", // Adjust for production
-    "style-src 'self' 'unsafe-inline'",
-    "img-src 'self' data: https:",
-    "font-src 'self' data:",
-    "connect-src 'self'",
+    "default-src 'none'",
+    "frame-ancestors 'none'",
+    "base-uri 'none'",
+    "form-action 'none'",
   ].join('; ')
   res.setHeader('Content-Security-Policy', csp)
   

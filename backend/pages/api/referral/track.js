@@ -17,10 +17,17 @@ const trackRateLimit = rateLimit({
   maxRequests: 30, // 30 requisições por minuto
 })
 
+// Validação flexível: aceita UUID ou slug customizado (3-30 chars, alfanumérico com - e _)
 const trackSchema = z.object({
   referral_code: z.string()
-    .uuid('Código de indicação inválido')
-    .refine((val) => validateUUID(val), 'Código de indicação inválido'),
+    .min(3, 'Código de indicação inválido')
+    .max(36, 'Código de indicação inválido')
+    .refine((val) => {
+      // Aceita UUID
+      if (validateUUID(val)) return true
+      // Aceita slug customizado (letras, números, hífen, underscore)
+      return /^[a-zA-Z0-9_-]+$/.test(val)
+    }, 'Código de indicação inválido'),
 })
 
 export default async function handler(req, res) {
@@ -49,38 +56,62 @@ export default async function handler(req, res) {
   try {
     // Sanitize input
     const sanitizedBody = {
-      referral_code: sanitizeString(req.body?.referral_code || '', 36),
+      referral_code: sanitizeString(req.body?.referral_code || '', 36).toLowerCase(),
     }
 
     const { referral_code } = trackSchema.parse(sanitizedBody)
+    
+    // Verificar se o referrer existe e está ativo
+    const referrer = await prisma.referrer.findUnique({ 
+      where: { referral_code } 
+    })
+
+    // Se não existe ou está inativo, não rastreia mas não retorna erro
+    if (!referrer || !referrer.ativo) {
+      return res.status(200).json({
+        tracked: false,
+        message: 'Código de indicação não encontrado ou inativo',
+      })
+    }
+
     const ip = extractIp(req)
     const user_agent = sanitizeString(req.headers['user-agent'] || 'unknown', 500)
 
-    await prisma.referralHit.create({
-      data: {
+    // Verificar se este IP já foi registrado para este referral_code
+    const existingHit = await prisma.referralHit.findFirst({
+      where: {
         referral_code,
         ip,
-        user_agent,
       },
     })
 
-    const [total_hits, uniqueIps, referrer] = await Promise.all([
-      prisma.referralHit.count({ where: { referral_code } }),
-      prisma.referralHit.findMany({
-        where: { referral_code },
-        select: { ip: true },
-        distinct: ['ip'],
-      }),
-      prisma.referrer.findUnique({ where: { referral_code } }),
-    ])
+    let isNewClick = false
 
-    const total_unique_ips = uniqueIps.length
+    // Só registra se for um IP novo (1 clique por IP)
+    if (!existingHit) {
+      await prisma.referralHit.create({
+        data: {
+          referral_code,
+          ip,
+          user_agent,
+        },
+      })
+      isNewClick = true
+    }
+
+    // Contar total de cliques únicos (cada registro = 1 IP único)
+    const totalClicks = await prisma.referralHit.count({ 
+      where: { referral_code } 
+    })
 
     return res.status(200).json({
       tracked: true,
-      total_hits,
-      total_unique_ips,
-      referrer,
+      isNewClick,
+      totalClicks,
+      referrer: {
+        nome: referrer.nome,
+        tipo: referrer.tipo,
+      },
     })
   } catch (error) {
     const isProduction = process.env.NODE_ENV === 'production'

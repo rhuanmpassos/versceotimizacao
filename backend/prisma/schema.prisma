@@ -7,22 +7,38 @@ generator client {
   provider = "prisma-client-js"
 }
 
+enum LeadStage {
+  NA_BASE
+  EM_CONTATO
+  COMPRADO
+  REJEITADO
+}
+
 model Lead {
-  id            String   @id @default(uuid())
+  id            String     @id @default(uuid())
   nome          String
   whatsapp      String
   referral_code String?
   ip            String?
   user_agent    String?
-  created_at    DateTime @default(now())
+  stage         LeadStage  @default(NA_BASE)
+  created_at    DateTime   @default(now())
+}
+
+enum ReferrerType {
+  NORMAL
+  INFLUENCER
 }
 
 model Referrer {
-  id            String   @id @default(uuid())
+  id            String       @id @default(uuid())
   nome          String
   whatsapp      String
-  referral_code String   @unique
-  created_at    DateTime @default(now())
+  referral_code String       @unique
+  tipo          ReferrerType @default(NORMAL)
+  ativo         Boolean      @default(true)
+  created_by    String?      // Email de quem criou (para logs)
+  created_at    DateTime     @default(now())
 }
 
 model ReferralHit {

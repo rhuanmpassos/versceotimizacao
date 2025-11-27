@@ -1,43 +1,49 @@
 /**
  * Resolve allowed CORS origins
- * In production, only allow specific origins
+ * SEMPRE valida contra lista de origens permitidas
  */
 const resolveAllowedOrigin = (req) => {
   const origin = req.headers.origin
   
-  // In production, validate against allowed origins
-  if (process.env.NODE_ENV === 'production') {
-    const allowedOrigins = []
-    
-    if (process.env.CORS_ALLOWED_ORIGIN) {
-      allowedOrigins.push(...process.env.CORS_ALLOWED_ORIGIN.split(',').map(o => o.trim()))
-    }
-    if (process.env.NEXT_PUBLIC_SITE_URL) {
-      allowedOrigins.push(process.env.NEXT_PUBLIC_SITE_URL)
-    }
-    if (process.env.REFERRAL_BASE_URL) {
-      allowedOrigins.push(process.env.REFERRAL_BASE_URL)
-    }
-    
-    // If origin matches allowed list, return it
-    if (origin && allowedOrigins.includes(origin)) {
-      return origin
-    }
-    
-    // If no origin header, deny (browser will send origin for CORS requests)
-    return null
+  // Construir lista de origens permitidas
+  const allowedOrigins = new Set()
+  
+  if (process.env.CORS_ALLOWED_ORIGIN) {
+    process.env.CORS_ALLOWED_ORIGIN.split(',').forEach(o => allowedOrigins.add(o.trim()))
+  }
+  if (process.env.NEXT_PUBLIC_SITE_URL) {
+    allowedOrigins.add(process.env.NEXT_PUBLIC_SITE_URL)
+  }
+  if (process.env.REFERRAL_BASE_URL) {
+    allowedOrigins.add(process.env.REFERRAL_BASE_URL)
   }
   
-  // In development, allow the requesting origin or localhost
-  if (origin) {
+  // Em desenvolvimento, adicionar localhost
+  if (process.env.NODE_ENV !== 'production') {
+    allowedOrigins.add('http://localhost:5173')
+    allowedOrigins.add('http://localhost:3000')
+    allowedOrigins.add('http://127.0.0.1:5173')
+    allowedOrigins.add('http://127.0.0.1:3000')
+  }
+  
+  // Se a origem está na lista permitida, retorna ela
+  if (origin && allowedOrigins.has(origin)) {
     return origin
   }
   
-  // Fallback for development
-  return process.env.CORS_ALLOWED_ORIGIN || 
-         process.env.NEXT_PUBLIC_SITE_URL || 
-         process.env.REFERRAL_BASE_URL || 
-         '*'
+  // Se não há origem mas temos origens permitidas, usar a primeira (para requests não-browser)
+  if (!origin && allowedOrigins.size > 0) {
+    // Retornar null para negar requests cross-origin sem header Origin
+    return null
+  }
+  
+  // Em desenvolvimento sem origem configurada, permite localhost
+  if (process.env.NODE_ENV !== 'production' && origin?.includes('localhost')) {
+    return origin
+  }
+  
+  // Negar por padrão em produção
+  return null
 }
 
 /**
@@ -51,7 +57,7 @@ export const applyCors = (req, res) => {
     res.setHeader('Access-Control-Allow-Credentials', 'true')
   }
   
-  res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS')
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS')
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With')
   res.setHeader('Access-Control-Max-Age', '86400')
   

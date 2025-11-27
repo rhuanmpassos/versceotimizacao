@@ -29,6 +29,16 @@ const router = createRouter({
       name: 'referral-info'
     },
     { 
+      path: '/admin', 
+      component: () => import('./pages/AdminLoginPage.vue'),
+      name: 'admin-login'
+    },
+    { 
+      path: '/admin/dashboard', 
+      component: () => import('./pages/AdminDashboardPage.vue'),
+      name: 'admin-dashboard'
+    },
+    { 
       path: '/:pathMatch(.*)*', 
       component: () => import('./pages/LandingPage.vue'),
       name: 'catch-all'

@@ -28,10 +28,17 @@ const leadSchema = z.object({
     .min(8, 'Informe um WhatsApp válido')
     .max(20, 'WhatsApp inválido')
     .refine((val) => validateWhatsApp(val), 'WhatsApp inválido'),
+  // Aceita UUID ou slug customizado (3-36 chars, alfanumérico com - e _)
   referral_code: z.string()
-    .uuid('Código de indicação inválido')
-    .optional()
-    .refine((val) => !val || validateUUID(val), 'Código de indicação inválido'),
+    .min(3, 'Código de indicação inválido')
+    .max(36, 'Código de indicação inválido')
+    .refine((val) => {
+      // Aceita UUID
+      if (validateUUID(val)) return true
+      // Aceita slug customizado (letras, números, hífen, underscore)
+      return /^[a-zA-Z0-9_-]+$/.test(val)
+    }, 'Código de indicação inválido')
+    .optional(),
 })
 
 // Normaliza o WhatsApp removendo caracteres especiais para comparação
@@ -83,11 +90,14 @@ export default async function handler(req, res) {
     const userAgent = req.headers['user-agent'] || 'unknown'
     const normalizedUserAgent = normalizeUserAgent(userAgent)
 
+    // Normalizar o referral_code para validações
+    const normalizedReferralCode = data.referral_code?.toLowerCase()
+    
     // Validações de segurança em múltiplas camadas quando há referral_code
-    if (data.referral_code) {
+    if (normalizedReferralCode) {
       const existingLeads = await prisma.lead.findMany({
         where: {
-          referral_code: data.referral_code,
+          referral_code: normalizedReferralCode,
         },
       })
 
@@ -170,20 +180,29 @@ export default async function handler(req, res) {
       }
     }
 
-    // Buscar nome do referrer se houver referral_code
+    // Buscar referrer se houver referral_code e verificar se está ativo
     let referrerNome = null
+    let validReferralCode = null
+    
     if (data.referral_code) {
       try {
         const referrer = await prisma.referrer.findUnique({
           where: {
-            referral_code: data.referral_code,
+            referral_code: data.referral_code.toLowerCase(),
           },
           select: {
             nome: true,
+            ativo: true,
+            referral_code: true,
           },
         })
-        if (referrer) {
+        
+        if (referrer && referrer.ativo) {
           referrerNome = referrer.nome
+          validReferralCode = referrer.referral_code
+        } else if (referrer && !referrer.ativo) {
+          console.info('[Leads] Referrer inativo, ignorando código:', data.referral_code)
+          // Não bloqueia, apenas ignora o código de referral inativo
         }
       } catch (error) {
         console.error('[Leads] Erro ao buscar referrer:', error.message)
@@ -193,8 +212,9 @@ export default async function handler(req, res) {
 
     const lead = await prisma.lead.create({
       data: {
-        ...data,
+        nome: data.nome,
         whatsapp: normalizedWhatsApp, // Salva o WhatsApp normalizado
+        referral_code: validReferralCode, // Usa o código validado (null se inativo/inexistente)
         ip: ip !== 'unknown' ? ip : null,
         user_agent: normalizedUserAgent !== 'unknown' ? userAgent : null,
       },
@@ -204,7 +224,7 @@ export default async function handler(req, res) {
       id: lead.id,
       nome: data.nome,
       whatsapp: normalizedWhatsApp,
-      referral_code: data.referral_code || null,
+      referral_code: validReferralCode || null,
       referrerNome: referrerNome || null,
     })
 

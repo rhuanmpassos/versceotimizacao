@@ -13,7 +13,19 @@ const apiClient = axios.create({
   },
 })
 
+// Interceptor para adicionar token nas requisições admin
+apiClient.interceptors.request.use((config) => {
+  const token = localStorage.getItem('admin_token')
+  if (token && config.url?.startsWith('/admin')) {
+    config.headers.Authorization = `Bearer ${token}`
+  }
+  return config
+})
+
 const extractMessage = (error, fallback) => {
+  if (error?.response?.data?.error) {
+    return error.response.data.error
+  }
   if (error?.response?.data?.message) {
     return error.response.data.message
   }
@@ -45,6 +57,70 @@ export default {
       return await apiClient.post('/referral/track', data)
     } catch (error) {
       error.message = extractMessage(error, 'Não foi possível registrar o clique.')
+      throw error
+    }
+  },
+
+  // Admin APIs
+  async adminLogin(data) {
+    try {
+      const response = await apiClient.post('/admin/auth/login', data)
+      if (response.data?.token) {
+        localStorage.setItem('admin_token', response.data.token)
+      }
+      return response
+    } catch (error) {
+      error.message = extractMessage(error, 'Credenciais inválidas.')
+      throw error
+    }
+  },
+
+  async adminVerify() {
+    try {
+      return await apiClient.get('/admin/auth/verify')
+    } catch (error) {
+      localStorage.removeItem('admin_token')
+      error.message = extractMessage(error, 'Sessão inválida.')
+      throw error
+    }
+  },
+
+  adminLogout() {
+    localStorage.removeItem('admin_token')
+  },
+
+  async adminListInfluencers() {
+    try {
+      return await apiClient.get('/admin/influencers/list')
+    } catch (error) {
+      error.message = extractMessage(error, 'Erro ao carregar influencers.')
+      throw error
+    }
+  },
+
+  async adminCreateInfluencer(data) {
+    try {
+      return await apiClient.post('/admin/influencers/create', data)
+    } catch (error) {
+      error.message = extractMessage(error, 'Erro ao criar influencer.')
+      throw error
+    }
+  },
+
+  async adminToggleInfluencer(id) {
+    try {
+      return await apiClient.post('/admin/influencers/toggle', { id })
+    } catch (error) {
+      error.message = extractMessage(error, 'Erro ao alterar status.')
+      throw error
+    }
+  },
+
+  async adminGetStats(slug) {
+    try {
+      return await apiClient.get(`/admin/influencers/stats?slug=${slug}`)
+    } catch (error) {
+      error.message = extractMessage(error, 'Erro ao carregar estatísticas.')
       throw error
     }
   },

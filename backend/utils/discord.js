@@ -226,6 +226,130 @@ async function sendDirectMessage({ nome, whatsapp, referrerNome = null }) {
 }
 
 /**
+ * Build admin notification message
+ */
+function buildAdminMessage({ type, email, discordId, provider, name, slug, influencerName }) {
+  const timestamp = new Date().toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' })
+  
+  const messages = {
+    unauthorized_access: {
+      content: `⚠️ **Tentativa de Acesso ao Admin**`,
+      embed: {
+        title: '🚨 Acesso Não Autorizado',
+        color: 0xff0000, // Vermelho
+        fields: [
+          { name: 'Email', value: email || 'N/A', inline: true },
+          { name: 'Discord ID', value: discordId || 'N/A', inline: true },
+          { name: 'Provider', value: provider || 'N/A', inline: true },
+          { name: 'Nome', value: name || 'N/A', inline: false },
+        ],
+        timestamp: new Date().toISOString(),
+        footer: { text: `Tentativa bloqueada em ${timestamp}` },
+      },
+    },
+    admin_login: {
+      content: `✅ **Admin Logou no Painel**`,
+      embed: {
+        title: '🔐 Login Autorizado',
+        color: 0x00ff00, // Verde
+        fields: [
+          { name: 'Email', value: email || 'N/A', inline: true },
+          { name: 'Provider', value: provider || 'N/A', inline: true },
+          { name: 'Nome', value: name || 'N/A', inline: false },
+        ],
+        timestamp: new Date().toISOString(),
+        footer: { text: `Login em ${timestamp}` },
+      },
+    },
+    influencer_created: {
+      content: `🎉 **Novo Influencer Cadastrado**`,
+      embed: {
+        title: '📢 Influencer Criado',
+        color: 0x9b59b6, // Roxo
+        fields: [
+          { name: 'Nome', value: influencerName || 'N/A', inline: true },
+          { name: 'Slug', value: slug || 'N/A', inline: true },
+          { name: 'Criado por', value: email || 'N/A', inline: false },
+        ],
+        timestamp: new Date().toISOString(),
+        footer: { text: `Criado em ${timestamp}` },
+      },
+    },
+    influencer_toggled: {
+      content: `🔄 **Status de Influencer Alterado**`,
+      embed: {
+        title: '⚙️ Status Atualizado',
+        color: 0xf39c12, // Laranja
+        fields: [
+          { name: 'Nome', value: influencerName || 'N/A', inline: true },
+          { name: 'Slug', value: slug || 'N/A', inline: true },
+          { name: 'Alterado por', value: email || 'N/A', inline: false },
+        ],
+        timestamp: new Date().toISOString(),
+        footer: { text: `Alterado em ${timestamp}` },
+      },
+    },
+  }
+  
+  return messages[type] || messages.admin_login
+}
+
+/**
+ * Send admin notification via webhook
+ */
+async function sendAdminWebhookNotification(options) {
+  const webhookUrl = process.env.DISCORD_WEBHOOK_URL
+
+  if (!webhookUrl) {
+    console.warn('[Discord] DISCORD_WEBHOOK_URL não configurada para admin')
+    return false
+  }
+
+  try {
+    const { content, embed } = buildAdminMessage(options)
+
+    const payload = {
+      content: content,
+      username: 'Admin Bot',
+      embeds: [embed],
+    }
+
+    const response = await fetch(webhookUrl, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(payload),
+    })
+
+    if (!response.ok) {
+      const errorText = await response.text()
+      console.error('[Discord] Erro ao enviar webhook admin:', {
+        status: response.status,
+        error: errorText,
+      })
+      return false
+    }
+
+    return true
+  } catch (error) {
+    console.error('[Discord] Erro ao enviar webhook admin:', error.message)
+    return false
+  }
+}
+
+/**
+ * Send admin notification to Discord
+ * @param {Object} options - Notification options
+ * @param {string} options.type - Type: 'unauthorized_access', 'admin_login', 'influencer_created', 'influencer_toggled'
+ * @returns {Promise<boolean>} Success status
+ */
+export async function sendAdminNotification(options) {
+  console.info('[Discord] Enviando notificação admin:', options.type)
+  return sendAdminWebhookNotification(options)
+}
+
+/**
  * Send notification to Discord (both webhook and DM)
  * @param {Object} options - Notification options
  * @param {string} options.nome - Lead name
