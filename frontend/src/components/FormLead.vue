@@ -66,10 +66,23 @@ const motionEnter = { opacity: 1, y: 0 }
 
 onMounted(() => {
   const urlParams = new URLSearchParams(window.location.search)
-  const refCode = urlParams.get('ref')
+  let refCode = urlParams.get('ref')
+  
   if (refCode) {
-    referralCode.value = refCode
-    console.info('[FormLead] Referral code detectado:', refCode)
+    // Limpa o ref caso o usuário tenha usado ? em vez de & na URL
+    // Ex: ?ref=opplex?utm_source=... → pega só "opplex"
+    if (refCode.includes('?')) {
+      refCode = refCode.split('?')[0]
+      console.warn('[FormLead] URL malformada detectada, ref limpo para:', refCode)
+    }
+    
+    // Só aceita se for válido (alfanumérico, hífen, underscore)
+    if (refCode && /^[a-zA-Z0-9_-]+$/.test(refCode)) {
+      referralCode.value = refCode
+      console.info('[FormLead] Referral code detectado:', refCode)
+    } else {
+      console.warn('[FormLead] Referral code inválido ignorado:', refCode)
+    }
   }
 })
 

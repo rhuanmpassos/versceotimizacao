@@ -19,7 +19,8 @@ Este é um sistema de programa de indicações onde:
 ### Tabela: `ReferralHit` (Cliques Rastreados)
 Cada clique único (por IP) é registrado com os seguintes dados:
 
-```typescript
+```javascript
+// Estrutura do registro (já existe no banco)
 {
   id: string (UUID)
   referral_code: string // Código do referrer (UUID ou slug)
@@ -53,7 +54,8 @@ Cada clique único (por IP) é registrado com os seguintes dados:
 ```
 
 ### Tabela: `Referrer` (Quem Indica)
-```typescript
+```javascript
+// Estrutura do registro (já existe no banco)
 {
   id: string
   nome: string
@@ -68,7 +70,8 @@ Cada clique único (por IP) é registrado com os seguintes dados:
 ```
 
 ### Tabela: `Lead` (Indicações/Cadastros)
-```typescript
+```javascript
+// Estrutura do registro (já existe no banco)
 {
   id: string
   nome: string
@@ -249,18 +252,18 @@ Os dados de cliques estão na tabela `ReferralHit`. Você precisará criar queri
 - Loading states
 - Empty states (quando não há dados)
 
-## Queries SQL/Prisma Necessárias
+## Queries SQL/Prisma para os Endpoints
 
-### Exemplos de queries que você precisará criar:
+### Exemplos de queries para criar nos endpoints de API (banco já existe, só criar as queries):
 
-```typescript
-// Total de cliques por dispositivo
+```sql
+-- Total de cliques por dispositivo
 SELECT device_type, COUNT(*) as total
 FROM "ReferralHit"
 WHERE referral_code = ?
 GROUP BY device_type
 
-// Cliques por país
+-- Cliques por país
 SELECT country, COUNT(*) as total
 FROM "ReferralHit"
 WHERE referral_code = ?
@@ -268,14 +271,14 @@ GROUP BY country
 ORDER BY total DESC
 LIMIT 10
 
-// Cliques ao longo do tempo (agrupado por dia)
+-- Cliques ao longo do tempo (agrupado por dia)
 SELECT DATE(created_at) as date, COUNT(*) as total
 FROM "ReferralHit"
 WHERE referral_code = ? AND created_at >= ? AND created_at <= ?
 GROUP BY DATE(created_at)
 ORDER BY date ASC
 
-// Taxa de conversão
+-- Taxa de conversão
 SELECT 
   COUNT(DISTINCT rh.id) as total_cliques,
   COUNT(DISTINCT l.id) as total_leads,
@@ -284,10 +287,11 @@ FROM "ReferralHit" rh
 LEFT JOIN "Lead" l ON l.referral_code = rh.referral_code
 WHERE rh.referral_code = ?
 
-// Top referrers (origem)
+-- Top referrers (origem)
 SELECT referrer, COUNT(*) as total
 FROM "ReferralHit"
-WHERE referral_code = ? AND referrer IS NOT NULL
+WHERE referral_code = ?
+AND referrer IS NOT NULL
 GROUP BY referrer
 ORDER BY total DESC
 LIMIT 10
@@ -320,16 +324,16 @@ LIMIT 10
    - Custo por clique (se houver dados de gastos)
    - Taxa de conversão por campanha
 
-## Tecnologias Recomendadas
+## Tecnologias
 
-- **Frontend:** React/Vue com biblioteca de gráficos (Chart.js, Recharts, ApexCharts)
-- **Backend:** API REST ou GraphQL
+- **Linguagem:** JavaScript (ES6+)
+- **Frontend:** Vue.js ou React com biblioteca de gráficos (Chart.js, ApexCharts)
+- **Backend:** Já existe - apenas criar endpoints de API adicionais se necessário
+- **Banco:** PostgreSQL com Prisma (já configurado, não precisa criar nada)
 - **Visualizações:** 
-  - Chart.js ou Recharts para gráficos básicos
-  - D3.js para visualizações avançadas
-  - Leaflet ou similar para mapas
-- **Tabelas:** React Table, AG Grid, ou similar
-- **Exportação:** jsPDF para PDF, xlsx para Excel
+  - Chart.js ou ApexCharts para gráficos
+  - Tabelas com ordenação e filtros
+- **Exportação:** jsPDF para PDF, xlsx para Excel (opcional)
 
 ## Segurança
 
