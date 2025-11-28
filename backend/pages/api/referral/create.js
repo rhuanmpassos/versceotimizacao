@@ -1,5 +1,6 @@
 import { z } from 'zod'
 import { v4 as uuidv4 } from 'uuid'
+import crypto from 'crypto'
 import prisma from '../../../lib/prisma'
 import { applyCors } from '../../../utils/cors'
 import {
@@ -11,6 +12,11 @@ import {
   sanitizeError,
   rateLimit,
 } from '../../../utils/security'
+
+// Gera um token de acesso seguro (64 caracteres hex = 256 bits de entropia)
+const generateSecureToken = () => {
+  return crypto.randomBytes(32).toString('hex')
+}
 
 // Rate limiter para criação de referrers
 const createRateLimit = rateLimit({
@@ -96,18 +102,27 @@ export default async function handler(req, res) {
     }
     
     const referral_code = uuidv4()
+    const access_token = generateSecureToken()
 
     await prisma.referrer.create({
       data: {
         nome: sanitizeString(nome, 100),
         whatsapp: normalizedWhatsApp, // Save normalized WhatsApp
         referral_code,
+        access_token,
       },
     })
 
-    const referralLink = `${resolveBaseUrl()}/?ref=${referral_code}`
+    const baseUrl = resolveBaseUrl()
+    const referralLink = `${baseUrl}/?ref=${referral_code}`
+    const dashboardLink = `${baseUrl}/referral/dashboard?token=${access_token}`
 
-    return res.status(201).json({ referralLink, referral_code })
+    return res.status(201).json({ 
+      referralLink, 
+      referral_code,
+      dashboardLink,
+      access_token,
+    })
   } catch (error) {
     const isProduction = process.env.NODE_ENV === 'production'
     

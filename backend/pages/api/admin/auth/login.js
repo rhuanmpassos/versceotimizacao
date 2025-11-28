@@ -1,6 +1,8 @@
 import { z } from 'zod'
 import bcrypt from 'bcryptjs'
 import jwt from 'jsonwebtoken'
+import fs from 'fs'
+import path from 'path'
 import { applyCors } from '../../../../utils/cors'
 import {
   extractIp,
@@ -11,6 +13,30 @@ import {
 } from '../../../../utils/security'
 import { sendAdminNotification } from '../../../../utils/discord'
 
+// Carregar .env manualmente para evitar problemas com $ no Next.js
+const loadEnvVar = (key) => {
+  try {
+    const envPath = path.join(process.cwd(), '.env')
+    if (fs.existsSync(envPath)) {
+      const envContent = fs.readFileSync(envPath, 'utf8')
+      const lines = envContent.split('\n')
+      const line = lines.find(l => l.trim().startsWith(`${key}=`))
+      if (line) {
+        const match = line.match(new RegExp(`${key}=(.+)`))
+        if (match) {
+          let value = match[1].trim()
+          // Remover aspas se existirem
+          value = value.replace(/^["']|["']$/g, '')
+          return value
+        }
+      }
+    }
+  } catch (e) {
+    console.error('[Env] Erro ao carregar .env:', e)
+  }
+  return process.env[key]
+}
+
 // Rate limiter muito restritivo para login
 const loginRateLimit = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutos
@@ -18,9 +44,10 @@ const loginRateLimit = rateLimit({
 })
 
 // Credenciais do admin (hash da senha gerado com bcrypt)
-const ADMIN_EMAIL = process.env.ADMIN_EMAIL
-const ADMIN_PASSWORD_HASH = process.env.ADMIN_PASSWORD_HASH
-const JWT_SECRET = process.env.JWT_SECRET
+// Carregar diretamente do .env para evitar problema com $ no Next.js
+const ADMIN_EMAIL = loadEnvVar('ADMIN_EMAIL') || process.env.ADMIN_EMAIL
+const ADMIN_PASSWORD_HASH = loadEnvVar('ADMIN_PASSWORD_HASH') || process.env.ADMIN_PASSWORD_HASH
+const JWT_SECRET = loadEnvVar('JWT_SECRET') || process.env.JWT_SECRET
 
 // Validação crítica: não permitir funcionamento sem variáveis de ambiente configuradas
 const validateEnvVars = () => {
@@ -93,7 +120,15 @@ export default async function handler(req, res) {
     }
 
     // Verificar senha
+    // Debug temporário
+    console.log('[DEBUG] Hash completo:', ADMIN_PASSWORD_HASH)
+    console.log('[DEBUG] Hash tamanho:', ADMIN_PASSWORD_HASH ? ADMIN_PASSWORD_HASH.length : 'undefined')
+    console.log('[DEBUG] Hash começa com:', ADMIN_PASSWORD_HASH ? ADMIN_PASSWORD_HASH.substring(0, 10) : 'undefined')
+    console.log('[DEBUG] Senha recebida:', password)
+    console.log('[DEBUG] Email correto:', email === ADMIN_EMAIL.toLowerCase())
+    
     const passwordValid = await bcrypt.compare(password, ADMIN_PASSWORD_HASH)
+    console.log('[DEBUG] Password valid:', passwordValid)
     
     if (!passwordValid) {
       console.warn('[Admin Auth] Tentativa de login com senha inválida:', { email, ip })

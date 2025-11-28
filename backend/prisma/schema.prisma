@@ -35,6 +35,7 @@ model Referrer {
   nome          String
   whatsapp      String
   referral_code String       @unique
+  access_token  String?      @unique // Token seguro para acessar o dashboard (opcional - só para referrers normais)
   tipo          ReferrerType @default(NORMAL)
   ativo         Boolean      @default(true)
   created_by    String?      // Email de quem criou (para logs)
@@ -46,5 +47,23 @@ model ReferralHit {
   referral_code String
   ip            String
   user_agent    String
+  // Dados de navegação
+  referrer      String?  // De onde veio (ex: google.com, facebook.com)
+  utm_source    String?  // Fonte da campanha
+  utm_medium    String?  // Meio da campanha
+  utm_campaign  String?  // Nome da campanha
+  // Dados de dispositivo
+  device_type   String?  // mobile, desktop, tablet
+  os            String?  // Windows, iOS, Android, etc
+  browser       String?  // Chrome, Firefox, Safari, etc
+  screen_width  Int?     // Largura da tela
+  screen_height Int?     // Altura da tela
+  // Localização (via IP)
+  country       String?  // País (ex: BR, US)
+  city          String?  // Cidade (aproximada)
+  region        String?  // Região/Estado
+  // Dados técnicos
+  language      String?  // Idioma do navegador (ex: pt-BR)
+  timezone      String?  // Timezone (ex: America/Sao_Paulo)
   created_at    DateTime @default(now())
 }

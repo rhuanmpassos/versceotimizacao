@@ -10,6 +10,7 @@ import {
   sanitizeError,
   rateLimit,
 } from '../../../utils/security'
+import { extractTrackingData } from '../../../utils/tracking'
 
 // Rate limiter para tracking (mais permissivo)
 const trackRateLimit = rateLimit({
@@ -28,6 +29,13 @@ const trackSchema = z.object({
       // Aceita slug customizado (letras, números, hífen, underscore)
       return /^[a-zA-Z0-9_-]+$/.test(val)
     }, 'Código de indicação inválido'),
+  // Campos opcionais de tracking
+  screen_width: z.number().int().positive().max(10000).optional().nullable(),
+  screen_height: z.number().int().positive().max(10000).optional().nullable(),
+  timezone: z.string().max(50).optional().nullable(),
+  utm_source: z.string().max(50).optional().nullable(),
+  utm_medium: z.string().max(50).optional().nullable(),
+  utm_campaign: z.string().max(100).optional().nullable(),
 })
 
 export default async function handler(req, res) {
@@ -57,9 +65,15 @@ export default async function handler(req, res) {
     // Sanitize input
     const sanitizedBody = {
       referral_code: sanitizeString(req.body?.referral_code || '', 36).toLowerCase(),
+      screen_width: req.body?.screen_width ? parseInt(req.body.screen_width, 10) : null,
+      screen_height: req.body?.screen_height ? parseInt(req.body.screen_height, 10) : null,
+      timezone: sanitizeString(req.body?.timezone || '', 50) || null,
+      utm_source: sanitizeString(req.body?.utm_source || '', 50) || null,
+      utm_medium: sanitizeString(req.body?.utm_medium || '', 50) || null,
+      utm_campaign: sanitizeString(req.body?.utm_campaign || '', 100) || null,
     }
 
-    const { referral_code } = trackSchema.parse(sanitizedBody)
+    const { referral_code, ...trackingParams } = trackSchema.parse(sanitizedBody)
     
     // Verificar se o referrer existe e está ativo
     const referrer = await prisma.referrer.findUnique({ 
@@ -76,6 +90,10 @@ export default async function handler(req, res) {
 
     const ip = extractIp(req)
     const user_agent = sanitizeString(req.headers['user-agent'] || 'unknown', 500)
+    
+    // Extrair dados de tracking adicionais (do request + body)
+    // includeLocation = false para não bloquear a resposta (pode ser feito async depois)
+    const trackingData = await extractTrackingData(req, trackingParams, ip, false)
 
     // Verificar se este IP já foi registrado para este referral_code
     const existingHit = await prisma.referralHit.findFirst({
@@ -94,6 +112,7 @@ export default async function handler(req, res) {
           referral_code,
           ip,
           user_agent,
+          ...trackingData,
         },
       })
       isNewClick = true

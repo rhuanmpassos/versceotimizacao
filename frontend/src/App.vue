@@ -27,7 +27,18 @@ onMounted(() => {
   const refCode = route.query.ref
 
   if (refCode) {
-    api.trackReferral({ referral_code: refCode })
+    // Coletar dados de tracking adicionais
+    const trackingData = {
+      referral_code: refCode,
+      screen_width: window.screen?.width || null,
+      screen_height: window.screen?.height || null,
+      timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || null,
+      utm_source: route.query.utm_source || null,
+      utm_medium: route.query.utm_medium || null,
+      utm_campaign: route.query.utm_campaign || null,
+    }
+    
+    api.trackReferral(trackingData)
   }
 })
 </script>

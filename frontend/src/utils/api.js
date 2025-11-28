@@ -60,6 +60,14 @@ export default {
       throw error
     }
   },
+  async getReferralStats(token) {
+    try {
+      return await apiClient.get(`/referral/stats?token=${token}`)
+    } catch (error) {
+      error.message = extractMessage(error, 'Não foi possível carregar as estatísticas.')
+      throw error
+    }
+  },
 
   // Admin APIs
   async adminLogin(data) {
