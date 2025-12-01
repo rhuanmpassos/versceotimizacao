@@ -6,13 +6,13 @@ import { validateWebhook } from '../../../utils/openpix'
  * Documentação: https://developers.openpix.com.br/docs/webhook/webhook-overview
  */
 export default async function handler(req, res) {
-  // Aceitar GET/HEAD para validação do webhook pela OpenPix
-  if (req.method === 'GET' || req.method === 'HEAD') {
+  // Aceitar GET para validação manual (retornar status ok)
+  if (req.method === 'GET') {
     return res.status(200).json({ status: 'ok', message: 'Webhook endpoint is active' })
   }
 
   if (req.method !== 'POST') {
-    res.setHeader('Allow', 'POST, GET, HEAD')
+    res.setHeader('Allow', ['GET', 'POST'])
     return res.status(405).json({ message: 'Method not allowed' })
   }
 
@@ -20,20 +20,32 @@ export default async function handler(req, res) {
     const signature = req.headers['x-webhook-signature']
     const payload = req.body
 
-    // Validar webhook
-    if (!validateWebhook(payload, signature)) {
-      console.error('[OpenPix Webhook] Assinatura inválida')
-      return res.status(401).json({ error: 'Assinatura inválida' })
+    console.log('[OpenPix Webhook] Evento recebido:', payload.event)
+    console.log('[OpenPix Webhook] Payload completo:', JSON.stringify(payload, null, 2))
+
+    // Detectar webhook de teste da OpenPix
+    // O webhook de teste tem apenas: { "data_criacao": "...", "event": "OPENPIX:CHARGE_COMPLETED" }
+    const isTestWebhook = payload.event && payload.data_criacao && !payload.charge
+
+    if (isTestWebhook) {
+      console.log('[OpenPix Webhook] Webhook de teste recebido - retornando 200')
+      return res.status(200).json({})
     }
 
-    console.log('[OpenPix Webhook] Evento recebido:', payload.event)
+    // Validar webhook apenas para webhooks reais (não de teste)
+    if (!validateWebhook(payload, signature)) {
+      console.error('[OpenPix Webhook] Assinatura inválida')
+      // Retornar 200 mesmo com assinatura inválida para não quebrar o fluxo
+      // Mas logar o erro para investigação
+      return res.status(200).json({ received: true, warning: 'Assinatura não validada' })
+    }
 
     // A OpenPix envia diferentes tipos de eventos
     // Principais: OPENPIX:CHARGE_COMPLETED, OPENPIX:CHARGE_EXPIRED
     const { event, charge } = payload
 
     if (!charge || !charge.correlationID) {
-      console.warn('[OpenPix Webhook] Payload sem correlationID')
+      console.warn('[OpenPix Webhook] Payload sem correlationID - retornando 200')
       return res.status(200).json({ received: true })
     }
 
@@ -69,8 +81,12 @@ export default async function handler(req, res) {
 
     return res.status(200).json({ received: true })
   } catch (error) {
-    console.error('[OpenPix Webhook] Erro:', error)
-    return res.status(500).json({ error: 'Erro ao processar webhook' })
+    // Sempre retornar 200 para webhooks, mesmo em caso de erro
+    // Isso evita retentativas desnecessárias da OpenPix
+    // Mas logar o erro para investigação
+    console.error('[OpenPix Webhook] Erro ao processar:', error)
+    console.error('[OpenPix Webhook] Stack:', error.stack)
+    return res.status(200).json({ received: true, error: 'Erro processado internamente' })
   }
 }
 
