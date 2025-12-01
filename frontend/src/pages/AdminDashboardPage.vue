@@ -26,6 +26,82 @@
       </div>
     </header>
 
+    <!-- Modal de Chave PIX -->
+    <Teleport to="body">
+      <Transition
+        enter-active-class="transition-all duration-200 ease-out"
+        enter-from-class="opacity-0"
+        enter-to-class="opacity-100"
+        leave-active-class="transition-all duration-200 ease-in"
+        leave-from-class="opacity-100"
+        leave-to-class="opacity-0"
+      >
+        <div 
+          v-if="showPixModal" 
+          class="fixed inset-0 z-50 flex items-center justify-center p-4"
+        >
+          <div 
+            class="absolute inset-0 bg-black/70 backdrop-blur-sm"
+            @click="closePixModal"
+          ></div>
+          
+          <div 
+            class="relative z-10 rounded-xl border border-white/10 bg-gradient-to-br from-slate-900 to-slate-800 p-5 shadow-2xl"
+            style="width: 340px; max-width: calc(100vw - 32px);"
+          >
+            <div class="flex items-center gap-2 mb-3">
+              <div class="flex h-8 w-8 items-center justify-center rounded-full bg-emerald-500/20 flex-shrink-0">
+                <svg class="h-4 w-4 text-emerald-400" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M17.66 8.34l-2.83 2.83c-.39.39-1.02.39-1.41 0l-2.83-2.83c-.39-.39-.39-1.02 0-1.41l2.83-2.83c.39-.39 1.02-.39 1.41 0l2.83 2.83c.39.39.39 1.02 0 1.41z"/>
+                  <path d="M6.34 19.66l2.83-2.83c.39-.39 1.02-.39 1.41 0l2.83 2.83c.39.39.39 1.02 0 1.41l-2.83 2.83c-.39.39-1.02.39-1.41 0l-2.83-2.83c-.39-.39-.39-1.02 0-1.41z"/>
+                </svg>
+              </div>
+              <div>
+                <h2 class="text-sm font-bold text-white">{{ currentInfluencer?.pix_key ? 'Editar Chave PIX' : 'Cadastrar Chave PIX' }}</h2>
+                <p class="text-xs text-white/60">{{ currentInfluencer?.nome }}</p>
+              </div>
+            </div>
+
+            <form @submit.prevent="savePixKey" class="space-y-3">
+              <div>
+                <input
+                  v-model="pixKeyInput"
+                  type="text"
+                  placeholder="Sua chave PIX"
+                  class="w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm text-white placeholder-white/40 focus:border-emerald-500/50 focus:outline-none focus:ring-1 focus:ring-emerald-500/20 transition-all"
+                  :disabled="savingPix"
+                />
+                <p class="mt-1.5 text-[10px] text-white/50">
+                  CPF, CNPJ, E-mail, Telefone ou Chave Aleatória
+                </p>
+              </div>
+
+              <p v-if="pixError" class="text-xs text-rose-400">{{ pixError }}</p>
+
+              <div class="flex gap-2">
+                <button
+                  type="button"
+                  @click="closePixModal"
+                  class="flex-1 rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-xs font-medium text-white/80 transition-colors hover:bg-white/10"
+                  :disabled="savingPix"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  class="flex-1 rounded-lg bg-gradient-to-r from-emerald-500 to-cyan-500 px-3 py-2 text-xs font-bold text-white transition-all hover:from-emerald-600 hover:to-cyan-600 disabled:opacity-50"
+                  :disabled="savingPix"
+                >
+                  <span v-if="!savingPix">{{ currentInfluencer?.pix_key ? 'Salvar' : 'Cadastrar' }}</span>
+                  <span v-else>Salvando...</span>
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      </Transition>
+    </Teleport>
+
     <!-- Main -->
     <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
       <!-- Mensagens -->
@@ -78,6 +154,16 @@
                 class="w-full px-3 py-2.5 rounded-xl bg-white/5 border border-white/10 text-white placeholder-white/40 focus:outline-none focus:border-cyan-500/50 text-sm"
               />
               <p class="mt-1 text-xs text-white/40">Link: /?ref={{ createForm.slug || 'slug' }}</p>
+            </div>
+            <div>
+              <label class="block text-sm font-medium text-white/70 mb-1.5">Chave PIX (opcional)</label>
+              <input
+                v-model="createForm.pix_key"
+                type="text"
+                placeholder="CPF, e-mail, telefone ou chave"
+                class="w-full px-3 py-2.5 rounded-xl bg-white/5 border border-white/10 text-white placeholder-white/40 focus:outline-none focus:border-cyan-500/50 text-sm"
+              />
+              <p class="mt-1 text-xs text-white/40">Para receber comissões</p>
             </div>
           </div>
 
@@ -173,6 +259,21 @@
                 <td class="py-4">
                   <div class="flex items-center gap-2">
                     <button
+                      @click="openPixModal(inf)"
+                      :class="[
+                        'p-2 rounded-lg transition-colors',
+                        inf.pix_key 
+                          ? 'bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400' 
+                          : 'bg-amber-500/10 hover:bg-amber-500/20 text-amber-400'
+                      ]"
+                      :title="inf.pix_key ? 'Editar PIX' : 'Cadastrar PIX'"
+                    >
+                      <svg class="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M17.66 8.34l-2.83 2.83c-.39.39-1.02.39-1.41 0l-2.83-2.83c-.39-.39-.39-1.02 0-1.41l2.83-2.83c.39-.39 1.02-.39 1.41 0l2.83 2.83c.39.39.39 1.02 0 1.41z"/>
+                        <path d="M6.34 19.66l2.83-2.83c.39-.39 1.02-.39 1.41 0l2.83 2.83c.39.39.39 1.02 0 1.41l-2.83 2.83c-.39.39-1.02.39-1.41 0l-2.83-2.83c-.39-.39-.39-1.02 0-1.41z"/>
+                      </svg>
+                    </button>
+                    <button
                       @click="copyLink(inf.referralLink)"
                       class="p-2 rounded-lg bg-white/5 hover:bg-white/10 text-white/70 hover:text-white transition-colors"
                       title="Copiar link"
@@ -243,6 +344,21 @@
 
             <div class="flex gap-2">
               <button
+                @click="openPixModal(inf)"
+                :class="[
+                  'px-3 py-2 rounded-lg text-xs font-medium transition-colors flex items-center justify-center gap-1.5',
+                  inf.pix_key 
+                    ? 'bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400' 
+                    : 'bg-amber-500/10 hover:bg-amber-500/20 text-amber-400'
+                ]"
+              >
+                <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M17.66 8.34l-2.83 2.83c-.39.39-1.02.39-1.41 0l-2.83-2.83c-.39-.39-.39-1.02 0-1.41l2.83-2.83c.39-.39 1.02-.39 1.41 0l2.83 2.83c.39.39.39 1.02 0 1.41z"/>
+                  <path d="M6.34 19.66l2.83-2.83c.39-.39 1.02-.39 1.41 0l2.83 2.83c.39.39.39 1.02 0 1.41l-2.83 2.83c-.39.39-1.02.39-1.41 0l-2.83-2.83c-.39-.39-.39-1.02 0-1.41z"/>
+                </svg>
+                {{ inf.pix_key ? 'Editar PIX' : 'PIX' }}
+              </button>
+              <button
                 @click="copyLink(inf.referralLink)"
                 class="flex-1 py-2 rounded-lg bg-white/5 hover:bg-white/10 text-white/70 text-sm font-medium transition-colors flex items-center justify-center gap-2"
               >
@@ -284,10 +400,18 @@ const createLoading = ref(false)
 const error = ref(null)
 const success = ref(null)
 
+// PIX Modal state
+const showPixModal = ref(false)
+const currentInfluencer = ref(null)
+const pixKeyInput = ref('')
+const savingPix = ref(false)
+const pixError = ref(null)
+
 const createForm = reactive({
   nome: '',
   whatsapp: '',
   slug: '',
+  pix_key: '',
 })
 
 // Verificar autenticação
@@ -328,6 +452,7 @@ const handleCreate = async () => {
     createForm.nome = ''
     createForm.whatsapp = ''
     createForm.slug = ''
+    createForm.pix_key = ''
     
     // Recarregar lista
     await loadInfluencers()
@@ -363,6 +488,50 @@ const copyLink = async (link) => {
 const handleLogout = () => {
   api.adminLogout()
   router.push('/admin')
+}
+
+// PIX Modal functions
+const openPixModal = (influencer) => {
+  currentInfluencer.value = influencer
+  pixKeyInput.value = influencer.pix_key || ''
+  pixError.value = null
+  showPixModal.value = true
+}
+
+const closePixModal = () => {
+  showPixModal.value = false
+  currentInfluencer.value = null
+  pixKeyInput.value = ''
+  pixError.value = null
+}
+
+const savePixKey = async () => {
+  if (!currentInfluencer.value) return
+
+  savingPix.value = true
+  pixError.value = null
+
+  try {
+    await api.adminUpdateInfluencerPix(
+      currentInfluencer.value.id,
+      pixKeyInput.value.trim() || null
+    )
+    
+    // Atualizar influencer na lista
+    const index = influencers.value.findIndex(i => i.id === currentInfluencer.value.id)
+    if (index !== -1) {
+      influencers.value[index].pix_key = pixKeyInput.value.trim() || null
+    }
+    
+    success.value = 'Chave PIX atualizada com sucesso!'
+    setTimeout(() => { success.value = null }, 3000)
+    closePixModal()
+  } catch (e) {
+    console.error('[Admin] Erro ao salvar PIX', e)
+    pixError.value = e.message || 'Não foi possível salvar. Tente novamente.'
+  } finally {
+    savingPix.value = false
+  }
 }
 </script>
 

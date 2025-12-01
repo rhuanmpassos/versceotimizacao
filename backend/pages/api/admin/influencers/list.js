@@ -45,6 +45,7 @@ async function handler(req, res) {
           nome: influencer.nome,
           whatsapp: influencer.whatsapp,
           slug: influencer.referral_code,
+          pix_key: influencer.pix_key,
           referralLink,
           ativo: influencer.ativo,
           created_at: influencer.created_at,

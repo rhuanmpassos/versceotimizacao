@@ -6,6 +6,9 @@ const baseURL = normalizeBaseUrl(
   import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000/api',
 )
 
+// Stripe publishable key
+export const STRIPE_PUBLISHABLE_KEY = import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY || ''
+
 const apiClient = axios.create({
   baseURL,
   headers: {
@@ -44,6 +47,34 @@ export default {
       throw error
     }
   },
+
+  // Checkout / Pagamento
+  async getAvailableSlots(date) {
+    try {
+      return await apiClient.get(`/meetings/available-slots?date=${date}`)
+    } catch (error) {
+      error.message = extractMessage(error, 'Não foi possível carregar os horários.')
+      throw error
+    }
+  },
+
+  async createPaymentIntent(data) {
+    try {
+      return await apiClient.post('/checkout/create-payment-intent', data)
+    } catch (error) {
+      error.message = extractMessage(error, 'Não foi possível iniciar o pagamento.')
+      throw error
+    }
+  },
+
+  async createPixCharge(data) {
+    try {
+      return await apiClient.post('/checkout/create-pix', data)
+    } catch (error) {
+      error.message = extractMessage(error, 'Não foi possível gerar o PIX.')
+      throw error
+    }
+  },
   async createReferrer(data) {
     try {
       return await apiClient.post('/referral/create', data)
@@ -65,6 +96,15 @@ export default {
       return await apiClient.get(`/referral/stats?token=${token}`)
     } catch (error) {
       error.message = extractMessage(error, 'Não foi possível carregar as estatísticas.')
+      throw error
+    }
+  },
+
+  async updatePixKey(token, pixKey) {
+    try {
+      return await apiClient.put(`/referral/update-pix?token=${token}`, { pix_key: pixKey })
+    } catch (error) {
+      error.message = extractMessage(error, 'Não foi possível salvar a chave PIX.')
       throw error
     }
   },
@@ -129,6 +169,18 @@ export default {
       return await apiClient.get(`/admin/influencers/stats?slug=${slug}`)
     } catch (error) {
       error.message = extractMessage(error, 'Erro ao carregar estatísticas.')
+      throw error
+    }
+  },
+
+  async adminUpdateInfluencerPix(influencerId, pixKey) {
+    try {
+      return await apiClient.put('/admin/influencers/update-pix', {
+        influencer_id: influencerId,
+        pix_key: pixKey || null,
+      })
+    } catch (error) {
+      error.message = extractMessage(error, 'Erro ao atualizar chave PIX.')
       throw error
     }
   },

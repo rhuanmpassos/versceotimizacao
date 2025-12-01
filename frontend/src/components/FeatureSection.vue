@@ -14,7 +14,7 @@
         :enter="{ opacity: 1, x: 0, transition: { delay: 0.2 } }"
         style="will-change: transform, opacity;"
       >
-        <div class="relative w-full max-w-full overflow-hidden rounded-[20px] sm:rounded-[24px] md:rounded-[28px] border border-white/[0.08] bg-[#0a0f1f] shadow-[0_20px_60px_rgba(0,0,0,0.55)]" style="aspect-ratio: 1200/646;">
+        <div class="relative w-full max-w-full overflow-hidden rounded-[20px] sm:rounded-[24px] md:rounded-[28px] border border-white/8 bg-[#0a0f1f] shadow-[0_20px_60px_rgba(0,0,0,0.55)]" style="aspect-ratio: 1200/646;">
           <img 
             :src="image" 
             :alt="imageAlt" 
@@ -22,7 +22,7 @@
             loading="lazy"
             decoding="async"
           />
-          <div class="pointer-events-none absolute inset-0 bg-gradient-to-br from-transparent via-transparent to-black/30"></div>
+          <div class="pointer-events-none absolute inset-0 bg-linear-to-br from-transparent via-transparent to-black/30"></div>
         </div>
         <span class="pointer-events-none absolute -left-5 sm:-left-10 top-5 sm:top-10 h-16 w-16 sm:h-24 sm:w-24 rounded-full bg-cyan-500/20 blur-3xl"></span>
         <span class="pointer-events-none absolute -bottom-4 sm:-bottom-8 right-0 h-20 w-20 sm:h-28 sm:w-28 rounded-full bg-orange-500/20 blur-3xl"></span>

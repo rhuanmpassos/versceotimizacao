@@ -57,7 +57,7 @@ export const applyCors = (req, res) => {
     res.setHeader('Access-Control-Allow-Credentials', 'true')
   }
   
-  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS')
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, OPTIONS')
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With')
   res.setHeader('Access-Control-Max-Age', '86400')
   

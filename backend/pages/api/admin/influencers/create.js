@@ -15,7 +15,18 @@ const createSchema = z.object({
   slug: z.string()
     .min(3, 'Slug deve ter pelo menos 3 caracteres')
     .max(30, 'Slug deve ter no máximo 30 caracteres'),
+  pix_key: z.string().max(140).optional(),
 })
+
+// Normaliza a chave PIX (remove +55 de telefone)
+const normalizePixKey = (pixKey) => {
+  if (!pixKey) return null
+  // Se começa com +55, remove
+  if (pixKey.startsWith('+55')) {
+    return pixKey.substring(3)
+  }
+  return pixKey
+}
 
 async function handler(req, res) {
   if (req.method !== 'POST') {
@@ -29,6 +40,7 @@ async function handler(req, res) {
       nome: sanitizeString(req.body?.nome || '', 100),
       whatsapp: sanitizeString(req.body?.whatsapp || '', 20),
       slug: sanitizeString(req.body?.slug || '', 30),
+      pix_key: req.body?.pix_key ? sanitizeString(req.body.pix_key, 140).trim() : undefined,
     }
 
     // Validar schema
@@ -68,12 +80,16 @@ async function handler(req, res) {
       })
     }
 
+    // Normalizar chave PIX se fornecida
+    const normalizedPixKey = normalizePixKey(data.pix_key)
+
     // Criar influencer
     const influencer = await prisma.referrer.create({
       data: {
         nome: sanitizeString(data.nome, 100),
         whatsapp: normalizedWhatsApp,
         referral_code: normalizedSlug,
+        pix_key: normalizedPixKey,
         tipo: 'INFLUENCER',
         ativo: true,
         created_by: req.adminUser?.email || 'admin',
@@ -111,6 +127,7 @@ async function handler(req, res) {
         nome: influencer.nome,
         whatsapp: normalizedWhatsApp,
         slug: normalizedSlug,
+        pix_key: normalizedPixKey,
         referralLink,
         ativo: influencer.ativo,
         created_at: influencer.created_at,

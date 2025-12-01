@@ -15,14 +15,20 @@ enum LeadStage {
 }
 
 model Lead {
-  id            String     @id @default(uuid())
+  id            String        @id @default(uuid())
   nome          String
   whatsapp      String
+  email         String?
   referral_code String?
+  tracking_id   String?       // Cookie ID para correlacionar mesma pessoa
   ip            String?
   user_agent    String?
-  stage         LeadStage  @default(NA_BASE)
-  created_at    DateTime   @default(now())
+  stage         LeadStage     @default(NA_BASE)
+  created_at    DateTime      @default(now())
+  transactions  Transaction[]
+  meetings      Meeting[]
+
+  @@index([tracking_id])
 }
 
 enum ReferrerType {
@@ -31,15 +37,18 @@ enum ReferrerType {
 }
 
 model Referrer {
-  id            String       @id @default(uuid())
+  id            String        @id @default(uuid())
   nome          String
   whatsapp      String
-  referral_code String       @unique
-  access_token  String?      @unique // Token seguro para acessar o dashboard (opcional - só para referrers normais)
-  tipo          ReferrerType @default(NORMAL)
-  ativo         Boolean      @default(true)
-  created_by    String?      // Email de quem criou (para logs)
-  created_at    DateTime     @default(now())
+  referral_code String        @unique
+  access_token  String?       @unique // Token seguro para acessar o dashboard (opcional - só para referrers normais)
+  pix_key       String?       // Chave PIX para receber pagamentos
+  tipo          ReferrerType  @default(NORMAL)
+  ativo         Boolean       @default(true)
+  created_by    String?       // Email de quem criou (para logs)
+  created_at    DateTime      @default(now())
+  transactions  Transaction[]
+  meetings      Meeting[]
 }
 
 model ReferralHit {
@@ -66,4 +75,73 @@ model ReferralHit {
   language      String?  // Idioma do navegador (ex: pt-BR)
   timezone      String?  // Timezone (ex: America/Sao_Paulo)
   created_at    DateTime @default(now())
+}
+
+// Enums para pagamento
+enum PaymentMethod {
+  card
+  pix
+}
+
+enum TransactionStatus {
+  requires_payment_method
+  requires_confirmation
+  processing
+  requires_action
+  requires_capture
+  canceled
+  succeeded
+}
+
+enum MeetingStatus {
+  scheduled
+  completed
+  no_show
+  cancelled
+}
+
+// Tabela de transações (pagamentos)
+model Transaction {
+  id                    String            @id @default(uuid())
+  lead_id               String
+  affiliate_id          String?
+  amount_product        Int               @default(20000) // R$ 200,00 em centavos
+  amount_affiliate      Int               @default(6000)  // R$ 60,00 em centavos
+  payment_method        PaymentMethod?
+  stripe_payment_intent String?
+  status                TransactionStatus @default(requires_payment_method)
+  scheduled_date        DateTime?         @db.Date
+  scheduled_time        DateTime?         @db.Time
+  created_at            DateTime          @default(now())
+  updated_at            DateTime          @updatedAt
+
+  lead      Lead      @relation(fields: [lead_id], references: [id])
+  affiliate Referrer? @relation(fields: [affiliate_id], references: [id])
+  meeting   Meeting?
+
+  @@index([lead_id])
+  @@index([affiliate_id])
+  @@index([status])
+  @@index([stripe_payment_intent])
+}
+
+// Tabela de reuniões (agendamentos confirmados)
+model Meeting {
+  id             String        @id @default(uuid())
+  transaction_id String        @unique
+  lead_id        String
+  affiliate_id   String?
+  meeting_date   DateTime      @db.Date
+  meeting_time   DateTime      @db.Time
+  status         MeetingStatus @default(scheduled)
+  created_at     DateTime      @default(now())
+  updated_at     DateTime      @updatedAt
+
+  transaction Transaction @relation(fields: [transaction_id], references: [id])
+  lead        Lead        @relation(fields: [lead_id], references: [id])
+  affiliate   Referrer?   @relation(fields: [affiliate_id], references: [id])
+
+  @@index([lead_id])
+  @@index([affiliate_id])
+  @@index([meeting_date])
 }

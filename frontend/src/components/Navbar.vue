@@ -10,7 +10,8 @@
       </a>
       <nav 
         :class="[
-          'fixed top-16 sm:top-20 left-0 right-0 bg-black/95 backdrop-blur-xl border-b border-white/10 transition-all duration-300 sm:static sm:bg-transparent sm:border-0 flex flex-col sm:flex-row items-center gap-4 sm:gap-6 text-sm text-white/70 py-4 sm:py-0 px-4 sm:px-0',
+          'fixed top-16 sm:top-20 left-0 right-0 bg-black/95 backdrop-blur-xl border-b border-white/10 transition-all duration-300 flex flex-col sm:flex-row items-center gap-4 sm:gap-6 text-sm text-white/70 py-4 sm:py-0 px-4',
+          'sm:static sm:bg-transparent sm:border-none sm:backdrop-blur-none sm:px-0',
           mobileMenuOpen ? 'opacity-100 translate-y-0' : 'opacity-0 -translate-y-full pointer-events-none sm:opacity-100 sm:translate-y-0 sm:pointer-events-auto'
         ]"
       >

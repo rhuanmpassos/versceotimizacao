@@ -14,6 +14,11 @@ const router = createRouter({
       name: 'landing'
     },
     { 
+      path: '/agendamento', 
+      component: () => import('./pages/SchedulingPage.vue'),
+      name: 'scheduling'
+    },
+    { 
       path: '/referral', 
       component: () => import('./pages/ReferralPage.vue'),
       name: 'referral'

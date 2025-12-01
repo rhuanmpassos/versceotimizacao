@@ -4,11 +4,7 @@ ALTER TABLE "Referrer" ADD COLUMN "access_token" TEXT;
 -- Gerar tokens para referrers existentes
 UPDATE "Referrer" SET "access_token" = gen_random_uuid()::text || '-' || encode(gen_random_bytes(16), 'hex') WHERE "access_token" IS NULL;
 
-<<<<<<< Current (Your changes)
--- Tornar o campo obrigatorio e unico
-=======
 -- Tornar o campo obrigatório e único
->>>>>>> Incoming (Background Agent changes)
 ALTER TABLE "Referrer" ALTER COLUMN "access_token" SET NOT NULL;
 
 -- CreateIndex

@@ -39,6 +39,8 @@ const leadSchema = z.object({
       return /^[a-zA-Z0-9_-]+$/.test(val)
     }, 'Código de indicação inválido')
     .optional(),
+  // Tracking ID do cookie para correlacionar mesma pessoa
+  tracking_id: z.string().max(100).optional(),
 })
 
 // Normaliza o WhatsApp removendo caracteres especiais para comparação
@@ -82,6 +84,7 @@ export default async function handler(req, res) {
       nome: sanitizeString(req.body?.nome || '', 100),
       whatsapp: sanitizeString(req.body?.whatsapp || '', 20),
       referral_code: req.body?.referral_code ? sanitizeString(req.body.referral_code, 36) : undefined,
+      tracking_id: req.body?.tracking_id ? sanitizeString(req.body.tracking_id, 100) : undefined,
     }
 
     const data = leadSchema.parse(sanitizedBody)
@@ -160,6 +163,33 @@ export default async function handler(req, res) {
       }
     }
 
+    // Validação: Verifica se o WhatsApp já está cadastrado (evita duplicidade)
+    const existingLead = await prisma.lead.findFirst({
+      where: {
+        whatsapp: normalizedWhatsApp,
+      },
+      orderBy: {
+        created_at: 'desc', // Pega o mais recente
+      },
+    })
+
+    if (existingLead) {
+      console.info('[Leads] WhatsApp já cadastrado, retornando lead existente:', {
+        id: existingLead.id,
+        nome: existingLead.nome,
+        whatsapp: normalizedWhatsApp,
+      })
+
+      // Retorna o lead existente em vez de criar duplicata
+      return res.status(200).json({
+        success: true,
+        lead_id: existingLead.id,
+        lead_name: existingLead.nome,
+        message: 'Você já está cadastrado! Redirecionando para agendamento...',
+        existing: true,
+      })
+    }
+
     // Validação adicional: Verifica tentativas de spam geral (sem referral_code também)
     // Se o mesmo IP tentar criar múltiplos leads em pouco tempo, bloqueia
     if (ip && ip !== 'unknown') {
@@ -215,6 +245,7 @@ export default async function handler(req, res) {
         nome: data.nome,
         whatsapp: normalizedWhatsApp, // Salva o WhatsApp normalizado
         referral_code: validReferralCode, // Usa o código validado (null se inativo/inexistente)
+        tracking_id: data.tracking_id || null, // Cookie ID para correlação
         ip: ip !== 'unknown' ? ip : null,
         user_agent: normalizedUserAgent !== 'unknown' ? userAgent : null,
       },
@@ -248,7 +279,11 @@ export default async function handler(req, res) {
       // Não falha a requisição se o Discord falhar
     }
 
-    return res.status(201).json({ success: true })
+    return res.status(201).json({ 
+      success: true,
+      lead_id: lead.id,
+      lead_name: lead.nome,
+    })
   } catch (error) {
     const isProduction = process.env.NODE_ENV === 'production'
     

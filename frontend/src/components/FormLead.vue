@@ -34,12 +34,11 @@
         :enter="{ ...motionEnter, transition: { delay: 0.3 } }"
         style="will-change: transform, opacity;"
       >
-        <span v-if="!loading">Quero Otimizar Meu PC</span>
-        <span v-else>Enviando...</span>
+        <span v-if="!loading">Marcar Otimização</span>
+        <span v-else>Processando...</span>
       </Button>
     </div>
     <div class="min-h-[24px]">
-      <p v-if="success" class="text-sm text-emerald-300">Recebemos seus dados! Em breve entraremos em contato.</p>
       <p v-if="error" class="text-sm text-rose-300">{{ error }}</p>
     </div>
   </form>
@@ -47,9 +46,13 @@
 
 <script setup>
 import { reactive, ref, onMounted } from 'vue'
+import { useRouter } from 'vue-router'
 import Input from './Input.vue'
 import Button from './Button.vue'
 import api from '../utils/api'
+import { getTrackingId } from '../utils/tracking'
+
+const router = useRouter()
 
 const form = reactive({
   nome: '',
@@ -57,7 +60,6 @@ const form = reactive({
 })
 
 const loading = ref(false)
-const success = ref(false)
 const error = ref(null)
 const referralCode = ref(null)
 
@@ -94,7 +96,6 @@ const submit = async () => {
   }
 
   loading.value = true
-  success.value = false
   error.value = null
   console.info('[FormLead] Enviando lead', { ...form, referral_code: referralCode.value })
 
@@ -102,21 +103,33 @@ const submit = async () => {
     const payload = {
       nome: form.nome,
       whatsapp: form.whatsapp,
+      tracking_id: getTrackingId(), // Cookie ID para correlação
     }
     
     if (referralCode.value) {
       payload.referral_code = referralCode.value
     }
 
-    await api.createLead(payload)
-    console.info('[FormLead] Lead enviado com sucesso')
-    success.value = true
-    form.nome = ''
-    form.whatsapp = ''
+    const response = await api.createLead(payload)
+    console.info('[FormLead] Lead enviado com sucesso', response.data)
+    
+    // Salvar lead_id no localStorage para uso no agendamento
+    if (response.data.lead_id) {
+      localStorage.setItem('lead_id', response.data.lead_id)
+      localStorage.setItem('lead_name', response.data.lead_name || form.nome)
+    }
+    
+    // Redirecionar para a página de agendamento
+    router.push({
+      name: 'scheduling',
+      query: {
+        lead: response.data.lead_id,
+        name: encodeURIComponent(form.nome),
+      },
+    })
   } catch (e) {
     console.error('[FormLead] Falha ao enviar lead', e)
     error.value = e.message || 'Não foi possível enviar agora. Tente novamente.'
-  } finally {
     loading.value = false
   }
 }

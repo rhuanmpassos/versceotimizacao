@@ -1,5 +1,96 @@
 <template>
   <section class="mx-auto flex min-h-[70vh] w-full max-w-4xl flex-col px-4 sm:px-5 md:px-8 pb-12 sm:pb-16 md:pb-20 pt-20 sm:pt-24 md:pt-28">
+    
+    <!-- Modal de Chave PIX -->
+    <Teleport to="body">
+      <Transition
+        enter-active-class="transition-all duration-200 ease-out"
+        enter-from-class="opacity-0"
+        enter-to-class="opacity-100"
+        leave-active-class="transition-all duration-200 ease-in"
+        leave-from-class="opacity-100"
+        leave-to-class="opacity-0"
+      >
+        <div 
+          v-if="showPixModal" 
+          class="fixed inset-0 z-50 flex items-center justify-center p-4"
+        >
+          <!-- Backdrop (clicável para fechar apenas se não for primeiro cadastro) -->
+          <div 
+            class="absolute inset-0 bg-black/70 backdrop-blur-sm"
+            @click="!isFirstPixSetup && closePixModal()"
+          ></div>
+          
+          <!-- Modal Content -->
+          <div 
+            class="relative z-10 rounded-xl border border-white/10 bg-gradient-to-br from-slate-900 to-slate-800 p-5 shadow-2xl transition-all duration-200"
+            style="width: 340px; max-width: calc(100vw - 32px);"
+          >
+          <!-- Header -->
+          <div class="flex items-center gap-2 mb-3">
+            <div class="flex h-8 w-8 items-center justify-center rounded-full bg-emerald-500/20 flex-shrink-0">
+              <svg class="h-4 w-4 text-emerald-400" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M17.66 8.34l-2.83 2.83c-.39.39-1.02.39-1.41 0l-2.83-2.83c-.39-.39-.39-1.02 0-1.41l2.83-2.83c.39-.39 1.02-.39 1.41 0l2.83 2.83c.39.39.39 1.02 0 1.41z"/>
+                <path d="M6.34 19.66l2.83-2.83c.39-.39 1.02-.39 1.41 0l2.83 2.83c.39.39.39 1.02 0 1.41l-2.83 2.83c-.39.39-1.02.39-1.41 0l-2.83-2.83c-.39-.39-.39-1.02 0-1.41z"/>
+              </svg>
+            </div>
+            <div>
+              <h2 class="text-sm font-bold text-white">{{ isFirstPixSetup ? 'Cadastre sua Chave PIX' : 'Editar Chave PIX' }}</h2>
+              <p class="text-xs text-white/60">Para receber pagamentos</p>
+            </div>
+          </div>
+
+          <!-- Aviso para primeiro cadastro -->
+          <div v-if="isFirstPixSetup" class="mb-3 rounded-lg bg-amber-500/10 border border-amber-500/30 p-2">
+            <p class="text-xs text-amber-200/90">
+              <strong class="text-amber-300">Importante:</strong> Cadastre sua chave PIX para receber os pagamentos!
+            </p>
+          </div>
+
+          <!-- Formulário -->
+          <form @submit.prevent="savePixKey" class="space-y-3">
+            <div>
+              <input
+                v-model="pixKeyInput"
+                type="text"
+                placeholder="Sua chave PIX"
+                class="w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm text-white placeholder-white/40 focus:border-emerald-500/50 focus:outline-none focus:ring-1 focus:ring-emerald-500/20 transition-all"
+                :disabled="savingPix"
+              />
+              <p class="mt-1.5 text-[10px] text-white/50">
+                CPF, CNPJ, E-mail, Telefone ou Chave Aleatória
+              </p>
+            </div>
+
+            <!-- Erro -->
+            <p v-if="pixError" class="text-xs text-rose-400">{{ pixError }}</p>
+
+            <!-- Botões -->
+            <div class="flex gap-2">
+              <button
+                v-if="!isFirstPixSetup"
+                type="button"
+                @click="closePixModal"
+                class="flex-1 rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-xs font-medium text-white/80 transition-colors hover:bg-white/10"
+                :disabled="savingPix"
+              >
+                Cancelar
+              </button>
+              <button
+                type="submit"
+                class="flex-1 rounded-lg bg-gradient-to-r from-emerald-500 to-cyan-500 px-3 py-2 text-xs font-bold text-white transition-all hover:from-emerald-600 hover:to-cyan-600 disabled:opacity-50"
+                :disabled="savingPix || !pixKeyInput.trim()"
+              >
+                <span v-if="!savingPix">{{ isFirstPixSetup ? 'Cadastrar' : 'Salvar' }}</span>
+                <span v-else>Salvando...</span>
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+      </Transition>
+    </Teleport>
+
     <!-- Estado de Carregamento -->
     <Card v-if="loading" class="w-full">
       <div class="flex flex-col items-center justify-center py-12 text-white">
@@ -34,9 +125,28 @@
               <p class="text-[10px] sm:text-xs font-semibold uppercase tracking-[0.3em] sm:tracking-[0.4em] text-white/60 mb-1">Painel de Indicações</p>
               <h1 class="text-2xl sm:text-3xl font-bold">Olá, {{ referrer.nome }}!</h1>
             </div>
-            <div class="flex-shrink-0">
-              <p class="text-xs text-white/50">Membro desde</p>
-              <p class="text-sm font-medium text-white/80">{{ formatDate(referrer.created_at) }}</p>
+            <div class="flex items-start gap-4">
+              <!-- Botão Chave PIX -->
+              <button
+                @click="openPixModal"
+                class="flex items-center gap-2 rounded-xl border px-3 py-2 text-sm font-medium transition-all"
+                :class="referrer.pix_key 
+                  ? 'border-emerald-500/30 bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20' 
+                  : 'border-amber-500/30 bg-amber-500/10 text-amber-400 hover:bg-amber-500/20 animate-pulse'"
+              >
+                <svg class="h-4 w-4" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M17.66 8.34l-2.83 2.83c-.39.39-1.02.39-1.41 0l-2.83-2.83c-.39-.39-.39-1.02 0-1.41l2.83-2.83c.39-.39 1.02-.39 1.41 0l2.83 2.83c.39.39.39 1.02 0 1.41z"/>
+                  <path d="M6.34 19.66l2.83-2.83c.39-.39 1.02-.39 1.41 0l2.83 2.83c.39.39.39 1.02 0 1.41l-2.83 2.83c-.39.39-1.02.39-1.41 0l-2.83-2.83c-.39-.39-.39-1.02 0-1.41z"/>
+                </svg>
+                <span class="hidden sm:inline">{{ referrer.pix_key ? 'Editar PIX' : 'Cadastrar PIX' }}</span>
+                <span class="sm:hidden">PIX</span>
+              </button>
+              
+              <!-- Info Membro -->
+              <div class="flex-shrink-0 text-right">
+                <p class="text-xs text-white/50">Membro desde</p>
+                <p class="text-sm font-medium text-white/80">{{ formatDate(referrer.created_at) }}</p>
+              </div>
             </div>
           </div>
           
@@ -100,7 +210,7 @@
               </svg>
             </div>
             <p class="text-3xl font-bold">{{ stats.totalConverted }}</p>
-            <p class="text-sm text-white/60 mt-1">Convertidas</p>
+            <p class="text-sm text-white/60 mt-1">Vendas</p>
           </div>
         </Card>
 
@@ -111,11 +221,182 @@
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
             </div>
-            <p class="text-3xl font-bold text-emerald-400">R$ {{ stats.earnings }}</p>
-            <p class="text-sm text-white/60 mt-1">Ganhos</p>
+            <p class="text-3xl font-bold text-emerald-400">R$ {{ formatMoney(stats.totalEarnings || stats.earnings) }}</p>
+            <p class="text-sm text-white/60 mt-1">Ganhos Totais</p>
           </div>
         </Card>
       </div>
+
+
+      <!-- Resumo Financeiro -->
+      <Card class="w-full">
+        <div class="text-white">
+          <h3 class="text-lg font-semibold mb-4 flex items-center gap-2">
+            <svg class="h-5 w-5 text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z" />
+            </svg>
+            Seus Ganhos
+          </h3>
+          
+          <!-- Cards de valores -->
+          <div class="grid sm:grid-cols-3 gap-4 mb-4">
+            <div class="p-4 rounded-xl bg-cyan-500/10 border border-cyan-500/30">
+              <p class="text-sm text-cyan-300/70 mb-1">Total a Receber</p>
+              <p class="text-2xl font-bold text-cyan-400">R$ {{ formatMoney(stats.totalEarnings || 0) }}</p>
+              <p class="text-xs text-white/50 mt-1">{{ stats.totalConverted || 0 }} venda(s)</p>
+            </div>
+            <div class="p-4 rounded-xl bg-emerald-500/10 border border-emerald-500/30">
+              <p class="text-sm text-emerald-300/70 mb-1">Disponível para Saque</p>
+              <p class="text-2xl font-bold text-emerald-400">R$ {{ formatMoney(stats.availableEarnings || 0) }}</p>
+              <p class="text-xs text-white/50 mt-1">Já liberado</p>
+            </div>
+            <div class="p-4 rounded-xl bg-amber-500/10 border border-amber-500/30">
+              <p class="text-sm text-amber-300/70 mb-1">Aguardando Liberação</p>
+              <p class="text-2xl font-bold text-amber-400">R$ {{ formatMoney(stats.pendingEarnings || 0) }}</p>
+              <p class="text-xs text-white/50 mt-1">Em processamento</p>
+            </div>
+          </div>
+
+          <!-- Disclaimer sobre prazos de liberação -->
+          <div class="p-4 rounded-xl bg-gradient-to-r from-blue-500/10 to-cyan-500/10 border border-cyan-500/20">
+            <div class="flex items-start gap-3">
+              <div class="flex h-8 w-8 items-center justify-center rounded-full bg-cyan-500/20 flex-shrink-0">
+                <svg class="h-4 w-4 text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+              </div>
+              <div>
+                <p class="font-semibold text-white mb-2">Prazos de Liberação</p>
+                <div class="space-y-2 text-sm">
+                  <div class="flex items-center gap-2">
+                    <svg class="h-4 w-4 text-blue-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
+                    </svg>
+                    <span class="text-white/80">
+                      <strong class="text-white">Cartão de Crédito:</strong> 
+                      <span class="text-cyan-400 font-medium">31 dias corridos</span> após a compra
+                    </span>
+                  </div>
+                  <div class="flex items-center gap-2">
+                    <svg class="h-4 w-4 text-emerald-400 flex-shrink-0" viewBox="0 0 24 24" fill="currentColor">
+                      <path d="M17.66 8.34l-2.83 2.83c-.39.39-1.02.39-1.41 0l-2.83-2.83c-.39-.39-.39-1.02 0-1.41l2.83-2.83c.39-.39 1.02-.39 1.41 0l2.83 2.83c.39.39.39 1.02 0 1.41z"/>
+                      <path d="M6.34 19.66l2.83-2.83c.39-.39 1.02-.39 1.41 0l2.83 2.83c.39.39.39 1.02 0 1.41l-2.83 2.83c-.39.39-1.02.39-1.41 0l-2.83-2.83c-.39-.39-.39-1.02 0-1.41z"/>
+                    </svg>
+                    <span class="text-white/80">
+                      <strong class="text-white">PIX:</strong> 
+                      <span class="text-cyan-400 font-medium">7 dias</span> após a compra
+                    </span>
+                  </div>
+                </div>
+                <p class="text-xs text-white/50 mt-3">
+                  Você receberá R$ 60,00 por cada venda aprovada. Os pagamentos são realizados após o prazo de liberação.
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </Card>
+
+      <!-- Histórico de Transações (TODAS) -->
+      <Card v-if="transactions && transactions.length > 0" class="w-full">
+        <div class="text-white">
+          <h3 class="text-lg font-semibold mb-4 flex items-center gap-2">
+            <svg class="h-5 w-5 text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" />
+            </svg>
+            Histórico de Transações
+          </h3>
+
+          <!-- Legenda de Status -->
+          <div class="flex flex-wrap gap-2 mb-4 text-xs">
+            <span class="px-2 py-1 rounded bg-emerald-500/20 text-emerald-400">Aprovado</span>
+            <span class="px-2 py-1 rounded bg-amber-500/20 text-amber-400">Aguardando</span>
+            <span class="px-2 py-1 rounded bg-rose-500/20 text-rose-400">Cancelado/Expirado</span>
+          </div>
+          
+          <div class="space-y-3">
+            <div 
+              v-for="tx in transactions" 
+              :key="tx.id"
+              class="p-4 rounded-xl bg-white/5 border border-white/10"
+            >
+              <!-- Linha principal -->
+              <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div class="flex items-center gap-3">
+                  <div class="flex h-10 w-10 items-center justify-center rounded-full text-white font-medium"
+                    :class="getTransactionIconClass(tx)">
+                    <!-- Ícone PIX -->
+                    <svg v-if="tx.paymentMethod === 'pix'" class="h-5 w-5" :class="getTransactionIconColor(tx)" viewBox="0 0 24 24" fill="currentColor">
+                      <path d="M17.66 8.34l-2.83 2.83c-.39.39-1.02.39-1.41 0l-2.83-2.83c-.39-.39-.39-1.02 0-1.41l2.83-2.83c.39-.39 1.02-.39 1.41 0l2.83 2.83c.39.39.39 1.02 0 1.41z"/>
+                      <path d="M6.34 19.66l2.83-2.83c.39-.39 1.02-.39 1.41 0l2.83 2.83c.39.39.39 1.02 0 1.41l-2.83 2.83c-.39.39-1.02.39-1.41 0l-2.83-2.83c-.39-.39-.39-1.02 0-1.41z"/>
+                    </svg>
+                    <!-- Ícone Cartão -->
+                    <svg v-else class="h-5 w-5" :class="getTransactionIconColor(tx)" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
+                    </svg>
+                  </div>
+                  <div>
+                    <p class="font-medium">{{ tx.leadName }}</p>
+                    <div class="flex items-center gap-2 mt-1">
+                      <!-- Badge do método de pagamento -->
+                      <span 
+                        class="px-2 py-0.5 rounded text-xs font-medium flex items-center gap-1"
+                        :class="tx.paymentMethod === 'pix' ? 'bg-emerald-500/20 text-emerald-400' : 'bg-blue-500/20 text-blue-400'"
+                      >
+                        <svg v-if="tx.paymentMethod === 'pix'" class="h-3 w-3" viewBox="0 0 24 24" fill="currentColor">
+                          <path d="M17.66 8.34l-2.83 2.83c-.39.39-1.02.39-1.41 0l-2.83-2.83c-.39-.39-.39-1.02 0-1.41l2.83-2.83c.39-.39 1.02-.39 1.41 0l2.83 2.83c.39.39.39 1.02 0 1.41z"/>
+                        </svg>
+                        <svg v-else class="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
+                        </svg>
+                        {{ tx.paymentMethod === 'pix' ? 'PIX' : 'Cartão' }}
+                      </span>
+                      <!-- Data -->
+                      <span class="text-xs text-white/50">{{ formatDate(tx.createdAt) }}</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="flex items-center gap-3 flex-wrap justify-end">
+                  <!-- Status -->
+                  <span 
+                    class="px-3 py-1 rounded-full text-xs font-medium"
+                    :class="getTransactionStatusClass(tx)"
+                  >
+                    {{ tx.statusLabel }}
+                  </span>
+
+                  <!-- Botão WhatsApp (se não aprovado e tem whatsapp) -->
+                  <a 
+                    v-if="tx.status !== 'succeeded' && tx.leadWhatsapp"
+                    :href="`https://wa.me/55${tx.leadWhatsapp}?text=Olá! Vi que você iniciou um agendamento de otimização mas não finalizou. Posso ajudar?`"
+                    target="_blank"
+                    class="px-3 py-1 rounded-full text-xs font-medium bg-green-500/20 text-green-400 hover:bg-green-500/30 transition-colors flex items-center gap-1"
+                  >
+                    <svg class="h-3.5 w-3.5" fill="currentColor" viewBox="0 0 24 24">
+                      <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/>
+                    </svg>
+                    Cobrar
+                  </a>
+                </div>
+              </div>
+
+              <!-- Detalhes extras para transações aprovadas -->
+              <div v-if="tx.status === 'succeeded'" class="mt-3 pt-3 border-t border-white/10 flex flex-wrap items-center justify-between gap-2 text-sm">
+                <div class="flex items-center gap-4">
+                  <span class="text-white/50">Compra em: <span class="text-white">{{ formatDate(tx.createdAt) }}</span></span>
+                  <span class="text-white/50">Liberação: 
+                    <span :class="tx.isReleased ? 'text-emerald-400' : 'text-amber-400'">
+                      {{ tx.isReleased ? 'Liberado ✓' : formatDate(tx.releaseDate) }}
+                    </span>
+                  </span>
+                </div>
+                <span class="font-bold text-emerald-400">+R$ {{ formatMoney(tx.amount) }}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </Card>
 
       <!-- Progresso para Otimização Grátis -->
       <Card class="w-full">
@@ -193,7 +474,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted, computed } from 'vue'
+import { ref, onMounted, computed, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import Card from '../components/Card.vue'
 import Button from '../components/Button.vue'
@@ -206,7 +487,66 @@ const error = ref(null)
 const referrer = ref(null)
 const stats = ref(null)
 const referrals = ref([])
+const sales = ref([])
+const transactions = ref([])
 const copied = ref(false)
+
+// PIX Modal state
+const showPixModal = ref(false)
+const pixKeyInput = ref('')
+const savingPix = ref(false)
+const pixError = ref(null)
+const isFirstPixSetup = computed(() => !referrer.value?.pix_key)
+
+// Abrir modal de PIX
+const openPixModal = () => {
+  pixKeyInput.value = referrer.value?.pix_key || ''
+  pixError.value = null
+  showPixModal.value = true
+}
+
+// Fechar modal de PIX
+const closePixModal = () => {
+  if (!isFirstPixSetup.value) {
+    showPixModal.value = false
+    pixError.value = null
+  }
+}
+
+// Salvar chave PIX
+const savePixKey = async () => {
+  if (!pixKeyInput.value.trim()) {
+    pixError.value = 'Informe sua chave PIX'
+    return
+  }
+
+  savingPix.value = true
+  pixError.value = null
+
+  try {
+    const token = route.query.token
+    await api.updatePixKey(token, pixKeyInput.value.trim())
+    
+    // Atualiza o referrer local
+    referrer.value.pix_key = pixKeyInput.value.trim()
+    showPixModal.value = false
+  } catch (e) {
+    console.error('[ReferralDashboard] Erro ao salvar PIX', e)
+    pixError.value = e.message || 'Não foi possível salvar. Tente novamente.'
+  } finally {
+    savingPix.value = false
+  }
+}
+
+// Mostrar modal automaticamente se não tiver PIX cadastrado
+watch(referrer, (newReferrer) => {
+  if (newReferrer && !newReferrer.pix_key) {
+    // Delay pequeno para não abrir imediatamente (melhor UX)
+    setTimeout(() => {
+      showPixModal.value = true
+    }, 500)
+  }
+}, { immediate: true })
 
 // Construir o link de indicação
 const referralLink = computed(() => {
@@ -237,6 +577,15 @@ const formatDate = (dateString) => {
   })
 }
 
+// Formatar valor monetário
+const formatMoney = (value) => {
+  if (typeof value !== 'number') return '0,00'
+  return value.toLocaleString('pt-BR', {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  })
+}
+
 // Obter iniciais do nome
 const getInitials = (name) => {
   return name
@@ -261,6 +610,27 @@ const getStatusClass = (status) => {
   }
 }
 
+// Classes para ícone da transação
+const getTransactionIconClass = (tx) => {
+  if (tx.status === 'succeeded') return 'bg-emerald-500/20'
+  if (tx.status === 'canceled') return 'bg-rose-500/20'
+  return 'bg-amber-500/20'
+}
+
+// Cor do ícone da transação
+const getTransactionIconColor = (tx) => {
+  if (tx.status === 'succeeded') return 'text-emerald-400'
+  if (tx.status === 'canceled') return 'text-rose-400'
+  return 'text-amber-400'
+}
+
+// Classes de status da transação
+const getTransactionStatusClass = (tx) => {
+  if (tx.status === 'succeeded') return 'bg-emerald-500/20 text-emerald-400'
+  if (tx.status === 'canceled') return 'bg-rose-500/20 text-rose-400'
+  return 'bg-amber-500/20 text-amber-400'
+}
+
 // Carregar estatísticas
 onMounted(async () => {
   const token = route.query.token
@@ -277,6 +647,8 @@ onMounted(async () => {
     referrer.value = response.data.referrer
     stats.value = response.data.stats
     referrals.value = response.data.referrals || []
+    sales.value = response.data.sales || []
+    transactions.value = response.data.transactions || []
   } catch (e) {
     console.error('[ReferralDashboard] Erro ao carregar stats', e)
     error.value = 'Este link é inválido ou expirou. Verifique se você está usando o link correto.'
